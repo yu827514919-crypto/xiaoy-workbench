@@ -12,3 +12,7 @@ build/
 *.keystore
 .assets/
 .workbuddy/
+
+# 模拟器日志与截图（本地临时产物）
+.emu.log
+.shots/
