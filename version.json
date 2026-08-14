@@ -1,6 +1,6 @@
 {
-  "versionName": "1.0.5",
-  "versionCode": 6,
-  "changelog": "v1.0.5 新增：记录时可拍照或从相册选照片（如拍下孩子洗漱、作品的瞬间）。",
-  "downloadUrl": "https://xiaoy-workbench-1468493405.cos.ap-guangzhou.myqcloud.com/xiaoy-v1.0.5-debug.zip"
+  "versionName": "1.0.6",
+  "versionCode": 7,
+  "changelog": "v1.0.6 新增：记录详情可随时补拍照片；设置里可一键清除全部记录（新用户友好）。",
+  "downloadUrl": "https://xiaoy-workbench-1468493405.cos.ap-guangzhou.myqcloud.com/xiaoy-v1.0.6-debug.zip"
 }

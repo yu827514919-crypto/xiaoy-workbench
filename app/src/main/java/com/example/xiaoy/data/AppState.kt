@@ -41,6 +41,16 @@ class AppState(context: Context) {
         it.copy(records = it.records.filter { r -> r.id != id })
     }
 
+    /** 给记录追加一张照片（第一张作为封面） */
+    fun addImageToRecord(id: String, imagePath: String) = update {
+        it.copy(records = it.records.map { r -> if (r.id == id) r.copy(images = r.images + imagePath) else r })
+    }
+
+    /** 清除全部记录（保留个人档案与分类），供新用户清空示例数据 */
+    fun clearAllRecords() = update {
+        it.copy(records = emptyList())
+    }
+
     fun setStatus(id: String, status: String) {
         val rec = recordById(id)
         update { d -> d.copy(records = d.records.map { r -> if (r.id == id) r.copy(status = status) else r }) }

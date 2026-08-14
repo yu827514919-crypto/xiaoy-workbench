@@ -52,6 +52,7 @@ import com.example.xiaoy.data.ImageRef
 import com.example.xiaoy.data.ageLabel
 import com.example.xiaoy.ui.AppConfig
 import com.example.xiaoy.ui.components.AppImage
+import com.example.xiaoy.ui.components.ConfirmDialog
 import com.example.xiaoy.ui.components.LocalSnackbar
 import com.example.xiaoy.ui.components.TagChip
 import com.example.xiaoy.ui.theme.Apricot
@@ -88,6 +89,7 @@ fun SettingsScreen(appState: AppState, nav: (com.example.xiaoy.ui.navigation.Rou
     var downloadProgress by remember { mutableStateOf(0) }
     var downloadFailed by remember { mutableStateOf(false) }
     var downloadError by remember { mutableStateOf("") }
+    var showClearConfirm by remember { mutableStateOf(false) }
 
     LazyColumn(
         Modifier.fillMaxSize().statusBarsPadding(),
@@ -201,6 +203,9 @@ fun SettingsScreen(appState: AppState, nav: (com.example.xiaoy.ui.navigation.Rou
                     }
                     context.startActivity(Intent.createChooser(intent, "导出数据"))
                 }
+                SettingRow("清除记录", "清空全部记录与照片，保留个人档案与分类") {
+                    showClearConfirm = true
+                }
                 SettingRow("本地存储", "数据仅保存在本机，删除应用会一并清除") {}
             }
         }
@@ -249,6 +254,20 @@ fun SettingsScreen(appState: AppState, nav: (com.example.xiaoy.ui.navigation.Rou
                 }
             },
             onDismiss = { if (!downloading) showUpdateDialog = false }
+        )
+    }
+
+    if (showClearConfirm) {
+        ConfirmDialog(
+            title = "清除全部记录？",
+            message = "会删除当前所有记录与照片（个人档案和分类会保留），此操作不可恢复。建议先「导出数据」备份。",
+            confirmText = "确认清除",
+            onConfirm = {
+                appState.clearAllRecords()
+                showClearConfirm = false
+                scope.launch { snackbar.showSnackbar("记录已清空，可以从第一笔开始记啦") }
+            },
+            onDismiss = { showClearConfirm = false }
         )
     }
 }
