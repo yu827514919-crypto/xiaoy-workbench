@@ -1,6 +1,6 @@
 {
-  "versionName": "1.0.3",
-  "versionCode": 4,
-  "changelog": "v1.0.3 修复：计划页下拉到底时，当天记录与即将提醒因列表 key 重复导致的崩溃。",
-  "downloadUrl": "https://github.com/yu827514919-crypto/xiaoy-workbench/releases/download/v1.0.3/xiaoy-v1.0.3-debug.apk"
+  "versionName": "1.0.4",
+  "versionCode": 5,
+  "changelog": "v1.0.4 更新源切换到腾讯云 COS（国内极速直连下载）。",
+  "downloadUrl": "https://xiaoy-workbench-1468493405.cos.ap-guangzhou.myqcloud.com/xiaoy-v1.0.4-debug.apk"
 }
