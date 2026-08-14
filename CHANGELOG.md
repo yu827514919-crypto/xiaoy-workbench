@@ -2,6 +2,10 @@
 
 本项目遵循语义化版本号，每次发版必须同步更新：`app/build.gradle.kts` 中的 `versionCode`/`versionName`、`ui/AppConfig.kt` 中的 `VERSION_CODE`/`VERSION_NAME`/`CHANGELOG`、仓库根目录 `version.json`，并在此追加一条更新说明。
 
+## v1.0.3（2026-08-14）
+
+- 修复：计划页下拉到底时，「当天记录」与「即将提醒」因同一列表的 key 重复导致的崩溃（`Key "rXX" was already used`）。
+
 ## v1.0.2（2026-08-14）
 
 - 新增：「检查更新」支持 App 内直接下载 APK 并唤起系统安装器，无需跳转浏览器。

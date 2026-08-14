@@ -133,7 +133,7 @@ fun PlanScreen(appState: AppState, nav: (Route) -> Unit) {
                         actionText = "记一笔") { nav(Route.Edit(null, null)) }
                 }
             } else {
-                items(dayRecords, key = { it.id }) { rec ->
+                items(dayRecords, key = { "day_${it.id}" }) { rec ->
                     TimelineRow(rec, onClick = { nav(Route.Detail(rec.id)) },
                         onToggleDone = {
                             val target = if (rec.status == RecordStatus.DONE.id) RecordStatus.DOING.id else RecordStatus.DONE.id
@@ -151,7 +151,7 @@ fun PlanScreen(appState: AppState, nav: (Route) -> Unit) {
                         style = MaterialTheme.typography.bodyMedium, color = InkSoft)
                 }
             } else {
-                items(upcoming, key = { it.id }) { rec ->
+                items(upcoming, key = { "rem_${it.id}" }) { rec ->
                     ReminderRow(rec) { nav(Route.Detail(rec.id)) }
                 }
             }
