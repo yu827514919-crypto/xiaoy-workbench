@@ -16,3 +16,8 @@ build/
 # 模拟器日志与截图（本地临时产物）
 .emu.log
 .shots/
+
+# 本地构建缓存（含故障排查时重命名的备份目录）
+.gradle.bak/
+.gh/
+.gh.bak/

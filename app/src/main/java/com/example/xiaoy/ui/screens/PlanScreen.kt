@@ -175,12 +175,15 @@ private fun TextButtonText(text: String, onClick: () -> Unit) {
 
 @Composable
 private fun TimelineRow(rec: com.example.xiaoy.data.Record, onClick: () -> Unit, onToggleDone: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        // 顶部圆点标记（纵向连接线改由固定点表示，避免 LazyColumn 内纵向 weight 导致的崩溃）
+        Box(Modifier.padding(top = 20.dp)) {
             Box(Modifier.size(10.dp).clip(CircleShape).background(rec.typeEnum().tint()))
-            Box(Modifier.width(2.dp).weight(1f).background(Color(0xFFE8E0D2)))
         }
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(10.dp))
         Box(Modifier.weight(1f)) {
             RecordCard(rec, onClick = onClick, onToggleDone = onToggleDone)
         }
