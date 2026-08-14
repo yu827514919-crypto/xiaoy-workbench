@@ -44,7 +44,8 @@ import com.example.xiaoy.data.Record
 import com.example.xiaoy.data.RecordStatus
 import com.example.xiaoy.data.RecordType
 import com.example.xiaoy.data.ImageRef
-import com.example.xiaoy.data.ageLabel
+import com.example.xiaoy.data.ageDetail
+import com.example.xiaoy.data.daysToNextBirthday
 import com.example.xiaoy.data.formatDateWithWeekday
 import com.example.xiaoy.data.isSameDay
 import com.example.xiaoy.data.startOfToday
@@ -156,11 +157,20 @@ fun HomeScreen(appState: AppState, nav: (Route) -> Unit) {
                     Text(
                         listOfNotNull(
                             profile?.childName?.ifBlank { null },
-                            ageLabel(profile?.childBirthday ?: "").ifBlank { null },
+                            ageDetail(profile?.childBirthday ?: "").ifBlank { null },
                             profile?.city?.ifBlank { null }
                         ).joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall, color = InkSoft
                     )
+                    val bdDays = profile?.childBirthday?.let { daysToNextBirthday(it) }
+                    if (bdDays != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            if (bdDays == 0) "今天是${profile?.childName ?: "宝贝"}的生日，生日快乐 🎂"
+                            else "距离${profile?.childName ?: "宝贝"}下次生日还有 $bdDays 天",
+                            style = MaterialTheme.typography.labelSmall, color = Apricot, fontWeight = FontWeight.SemiBold
+                        )
+                    }
                     Spacer(Modifier.height(10.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ProgressRing(

@@ -106,3 +106,40 @@ fun ageLabel(birthday: String): String = try {
 } catch (_: Exception) {
     ""
 }
+
+/** 精确年龄，如 "6岁5个月12天" */
+fun ageDetail(birthday: String): String = try {
+    val birth = SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).parse(birthday) ?: return ""
+    val now = Calendar.getInstance()
+    val b = Calendar.getInstance().apply { time = birth }
+    var years = now.get(Calendar.YEAR) - b.get(Calendar.YEAR)
+    var months = now.get(Calendar.MONTH) - b.get(Calendar.MONTH)
+    var days = now.get(Calendar.DAY_OF_MONTH) - b.get(Calendar.DAY_OF_MONTH)
+    if (days < 0) {
+        months -= 1
+        val prev = Calendar.getInstance().apply { timeInMillis = now.timeInMillis; add(Calendar.MONTH, -1) }
+        days += prev.getActualMaximum(Calendar.DAY_OF_MONTH)
+    }
+    if (months < 0) { years -= 1; months += 12 }
+    when {
+        years <= 0 -> "${months}个月${days}天"
+        months == 0 -> "${years}岁${days}天"
+        else -> "${years}岁${months}个月${days}天"
+    }
+} catch (_: Exception) {
+    ""
+}
+
+/** 距下次生日还有多少天（今天生日则为 0） */
+fun daysToNextBirthday(birthday: String): Int? = try {
+    val birth = SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).parse(birthday) ?: return null
+    val now = Calendar.getInstance()
+    val next = Calendar.getInstance().apply {
+        time = birth
+        set(Calendar.YEAR, now.get(Calendar.YEAR))
+    }
+    if (next.timeInMillis < startOfToday()) next.add(Calendar.YEAR, 1)
+    ((startOfDay(next.timeInMillis) - startOfToday()) / 86400000L).toInt()
+} catch (_: Exception) {
+    null
+}

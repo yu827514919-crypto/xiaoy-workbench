@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -81,6 +82,11 @@ fun InsightsScreen(appState: AppState, nav: (Route) -> Unit) {
     val todayAttention = data.records.filter { it.status == RecordStatus.ATTENTION.id || it.status == RecordStatus.TODO.id }
         .sortedByDescending { it.dateEpoch }.firstOrNull()
 
+    val milestones = data.records.filter { it.type == RecordType.GROWTH.id }
+        .sortedByDescending { it.dateEpoch }.take(8)
+
+    val heatmap = appState.dailyDone(105)
+
     LazyColumn(
         Modifier.fillMaxSize().statusBarsPadding(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)
@@ -110,6 +116,35 @@ fun InsightsScreen(appState: AppState, nav: (Route) -> Unit) {
                 MiniBars(doneDays.map { it.second }, color = Apricot, height = 80.dp, labels = labels)
                 Spacer(Modifier.height(8.dp))
                 Text("数据来源：已完成记录数按日期统计", style = MaterialTheme.typography.labelSmall, color = InkSoft)
+            }
+        }
+
+        // 打卡热力图
+        item {
+            SectionTitle("打卡热力图", modifier = Modifier.padding(horizontal = 16.dp).padding(top = 20.dp))
+        }
+        item {
+            Column(Modifier.padding(horizontal = 16.dp).padding(top = 8.dp)
+                .clip(RoundedCornerShape(20.dp)).background(Paper).padding(16.dp)) {
+                HabitHeatmap(heatmap)
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("浅", style = MaterialTheme.typography.labelSmall, color = InkSoft)
+                    Spacer(Modifier.width(4.dp))
+                    Box(Modifier.size(11.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFFEFE8DA)))
+                    Spacer(Modifier.width(3.dp))
+                    Box(Modifier.size(11.dp).clip(RoundedCornerShape(3.dp)).background(Sage.copy(alpha = 0.5f)))
+                    Spacer(Modifier.width(3.dp))
+                    Box(Modifier.size(11.dp).clip(RoundedCornerShape(3.dp)).background(Sage))
+                    Spacer(Modifier.width(3.dp))
+                    Box(Modifier.size(11.dp).clip(RoundedCornerShape(3.dp)).background(LeafGreen))
+                    Spacer(Modifier.width(6.dp))
+                    Text("多", style = MaterialTheme.typography.labelSmall, color = InkSoft)
+                    Spacer(Modifier.weight(1f))
+                    Text("近 15 周", style = MaterialTheme.typography.labelSmall, color = InkSoft)
+                }
+                Spacer(Modifier.height(6.dp))
+                Text("数据来源：每天有完成记录的天数", style = MaterialTheme.typography.labelSmall, color = InkSoft)
             }
         }
 
@@ -154,6 +189,19 @@ fun InsightsScreen(appState: AppState, nav: (Route) -> Unit) {
                     if (thisWeekDone - lastWeekDone >= 0) "较上周 +${thisWeekDone - lastWeekDone}" else "较上周 ${thisWeekDone - lastWeekDone}",
                     color = Sage)
                 ChangeRow("成长里程碑", "${appState.milestones().size} 个", "每一次长大都算数", color = Terracotta)
+            }
+        }
+
+        // 成长里程碑时间轴
+        if (milestones.isNotEmpty()) {
+            item {
+                SectionTitle("成长里程碑", modifier = Modifier.padding(horizontal = 16.dp).padding(top = 20.dp))
+            }
+            item {
+                Column(Modifier.padding(horizontal = 16.dp).padding(top = 8.dp)
+                    .clip(RoundedCornerShape(20.dp)).background(Paper).padding(16.dp)) {
+                    MilestoneTimeline(milestones)
+                }
             }
         }
 
@@ -246,4 +294,55 @@ private fun HeightTrendChart(records: List<com.example.xiaoy.data.Record>) {
             Text(labels.last(), style = MaterialTheme.typography.labelSmall, color = InkSoft)
         }
     }
+}
+
+@Composable
+private fun MilestoneTimeline(records: List<com.example.xiaoy.data.Record>) {
+    Column {
+        records.forEachIndexed { i, r ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.size(12.dp).clip(CircleShape).background(if (i == 0) Apricot else Sage))
+                    if (i != records.lastIndex) {
+                        Box(Modifier.width(2.dp).height(48.dp).background(Color(0xFFE8E0D2)))
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f).padding(bottom = if (i == records.lastIndex) 0.dp else 12.dp)) {
+                    Text(formatDate(r.dateEpoch), style = MaterialTheme.typography.labelSmall, color = InkSoft)
+                    Spacer(Modifier.height(2.dp))
+                    Text(r.title, style = MaterialTheme.typography.titleSmall, color = Ink, fontWeight = FontWeight.SemiBold)
+                    if (r.notes.isNotBlank()) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(r.notes, style = MaterialTheme.typography.bodySmall, color = InkSoft, maxLines = 2)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HabitHeatmap(data: List<Pair<Long, Int>>) {
+    val weeks = data.size / 7
+    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        for (w in 0 until weeks) {
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                for (d in 0 until 7) {
+                    val idx = w * 7 + d
+                    if (idx < data.size) {
+                        val count = data[idx].second
+                        Box(Modifier.size(11.dp).clip(RoundedCornerShape(3.dp)).background(heatColor(count)))
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun heatColor(count: Int): Color = when {
+    count == 0 -> Color(0xFFEFE8DA)
+    count <= 1 -> Sage.copy(alpha = 0.55f)
+    count <= 2 -> Sage
+    else -> LeafGreen
 }

@@ -3,6 +3,12 @@ package com.example.xiaoy.ui.screens
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.Typeface
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -57,6 +63,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -74,15 +81,18 @@ import com.example.xiaoy.ui.components.RecordCard
 import com.example.xiaoy.ui.components.SectionTitle
 import com.example.xiaoy.ui.components.StatusBadge
 import com.example.xiaoy.ui.components.TagChip
+import com.example.xiaoy.ui.components.drawableRes
 import com.example.xiaoy.ui.navigation.Route
 import com.example.xiaoy.ui.theme.Apricot
 import com.example.xiaoy.ui.theme.Cream
 import com.example.xiaoy.ui.theme.Ink
 import com.example.xiaoy.ui.theme.InkSoft
 import com.example.xiaoy.ui.theme.Paper
+import com.example.xiaoy.ui.theme.Sage
 import com.example.xiaoy.ui.theme.Terracotta
 import com.example.xiaoy.ui.tint
 import java.io.File
+import java.io.FileOutputStream
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -154,6 +164,17 @@ fun DetailScreen(appState: AppState, id: String, nav: (Route) -> Unit, back: () 
             launchCamera()
         } else {
             cameraPermission.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    var sharingCard by remember { mutableStateOf(false) }
+    fun generateShareCard() {
+        scope.launch {
+            sharingCard = true
+            val file = withContext(Dispatchers.IO) { buildShareCard(context, record) }
+            sharingCard = false
+            if (file != null) shareImage(context, file)
+            else snackbar.showSnackbar("生成卡片失败，请重试")
         }
     }
 
@@ -296,23 +317,32 @@ fun DetailScreen(appState: AppState, id: String, nav: (Route) -> Unit, back: () 
             }
         }
 
-        // 补一张照片
+        // 补照片 + 分享成长卡
         item {
-            OutlinedButton(
-                onClick = { showAddPhoto = true },
-                enabled = !addingPhoto,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Apricot),
-                shape = RoundedCornerShape(50.dp),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 20.dp)
-            ) {
-                if (addingPhoto) {
-                    CircularProgressIndicator(color = Apricot, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("保存中…")
-                } else {
-                    Icon(Icons.Filled.AddAPhoto, null, tint = Apricot, modifier = Modifier.size(18.dp))
+            Row(Modifier.padding(horizontal = 16.dp).padding(top = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(
+                    onClick = { showAddPhoto = true },
+                    enabled = !addingPhoto,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Apricot),
+                    shape = RoundedCornerShape(50.dp), modifier = Modifier.weight(1f)
+                ) {
+                    if (addingPhoto) {
+                        CircularProgressIndicator(color = Apricot, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                    } else {
+                        Icon(Icons.Filled.AddAPhoto, null, tint = Apricot, modifier = Modifier.size(16.dp))
+                    }
                     Spacer(Modifier.width(6.dp))
-                    Text("补一张照片")
+                    Text(if (addingPhoto) "保存中…" else "补一张照片")
+                }
+                OutlinedButton(
+                    onClick = { generateShareCard() },
+                    enabled = !sharingCard,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Sage),
+                    shape = RoundedCornerShape(50.dp), modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Filled.Share, null, tint = Sage, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (sharingCard) "生成中…" else "分享成长卡")
                 }
             }
         }
@@ -417,4 +447,75 @@ private fun DetailMetric(record: Record) {
             sub?.let { Text(it, style = MaterialTheme.typography.titleSmall, color = Ink) }
         }
     }
+}
+
+private fun loadCoverBitmap(context: android.content.Context, ref: String): Bitmap? = try {
+    val (kind, value) = ImageRef.parts(ref)
+    if (kind == ImageRef.DRAWABLE) {
+        val resId = drawableRes(value) ?: return null
+        BitmapFactory.decodeResource(context.resources, resId)
+    } else {
+        BitmapFactory.decodeFile(value)
+    }
+} catch (_: Exception) { null }
+
+private fun buildShareCard(context: android.content.Context, record: Record): File? = try {
+    val w = 1080
+    val h = 1440
+    val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bmp)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    canvas.drawColor(android.graphics.Color.parseColor("#FFF8EE"))
+
+    var topY = 90
+    val coverBmp = record.cover()?.let { loadCoverBitmap(context, it) }
+    if (coverBmp != null) {
+        canvas.drawBitmap(coverBmp, Rect(0, 0, coverBmp.width, coverBmp.height), Rect(0, 0, w, 620), paint)
+        topY = 620
+    }
+
+    paint.color = record.typeEnum().tint().toArgb()
+    paint.textSize = 40f
+    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    canvas.drawText(record.typeEnum().label, 60f, (topY + 100).toFloat(), paint)
+
+    paint.color = android.graphics.Color.parseColor("#3A2E24")
+    paint.textSize = 72f
+    canvas.drawText(record.title, 60f, (topY + 190).toFloat(), paint)
+
+    paint.color = android.graphics.Color.parseColor("#8A7B6C")
+    paint.textSize = 40f
+    paint.typeface = Typeface.DEFAULT
+    canvas.drawText(formatFullDate(record.dateEpoch), 60f, (topY + 260).toFloat(), paint)
+
+    if (record.notes.isNotBlank()) {
+        paint.color = android.graphics.Color.parseColor("#6B5D50")
+        paint.textSize = 42f
+        val note = if (record.notes.length > 30) record.notes.take(30) + "…" else record.notes
+        canvas.drawText(note, 60f, (topY + 340).toFloat(), paint)
+    }
+
+    paint.color = android.graphics.Color.parseColor("#C98736")
+    paint.textSize = 44f
+    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    canvas.drawText("小芽 · 记录成长", 60f, (h - 90).toFloat(), paint)
+
+    val dir = File(context.cacheDir, "share").apply { mkdirs() }
+    val file = File(dir, "share_${System.currentTimeMillis()}.png")
+    FileOutputStream(file).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    bmp.recycle()
+    file
+} catch (_: Exception) { null }
+
+private fun shareImage(context: android.content.Context, file: File) {
+    try {
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "image/png"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "分享成长卡"))
+    } catch (_: Exception) { }
 }

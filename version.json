@@ -1,6 +1,6 @@
 {
-  "versionName": "1.0.6",
-  "versionCode": 7,
-  "changelog": "v1.0.6 新增：记录详情可随时补拍照片；设置里可一键清除全部记录（新用户友好）。",
-  "downloadUrl": "https://xiaoy-workbench-1468493405.cos.ap-guangzhou.myqcloud.com/xiaoy-v1.0.6-debug.zip"
+  "versionName": "1.0.7",
+  "versionCode": 8,
+  "changelog": "v1.0.7 新增：成长倒计时、成长里程碑时间轴、打卡热力图、分享成长卡。",
+  "downloadUrl": "https://xiaoy-workbench-1468493405.cos.ap-guangzhou.myqcloud.com/xiaoy-v1.0.7-debug.zip"
 }
