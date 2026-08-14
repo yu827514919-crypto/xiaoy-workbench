@@ -1,8 +1,13 @@
 package com.example.xiaoy.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -29,6 +34,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -52,6 +58,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -80,6 +87,7 @@ import com.example.xiaoy.ui.tint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.Calendar
 
 @Composable
@@ -110,6 +118,8 @@ fun EditScreen(appState: AppState, id: String?, presetType: String?, back: () ->
     var uploading by remember { mutableStateOf(false) }
     var showMore by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
             uploading = true
@@ -125,6 +135,49 @@ fun EditScreen(appState: AppState, id: String?, presetType: String?, back: () ->
             }
         }
     }
+
+    // 拍照
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+    val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        val uri = pendingCameraUri
+        pendingCameraUri = null
+        if (success && uri != null) {
+            uploading = true
+            scope.launch {
+                val path = withContext(Dispatchers.IO) { appState.copyImageToStorage(uri) }
+                uploading = false
+                if (path != null) {
+                    images = images + ImageRef.ofFile(path)
+                    snackbar.showSnackbar("照片已添加，第一张将作为封面")
+                } else {
+                    snackbar.showSnackbar("照片保存失败，请重试")
+                }
+            }
+        }
+    }
+
+    fun launchCamera() {
+        val dir = File(context.cacheDir, "camera").apply { mkdirs() }
+        val file = File(dir, "cam_${System.currentTimeMillis()}.jpg")
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        pendingCameraUri = uri
+        takePicture.launch(uri)
+    }
+
+    val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) launchCamera()
+        else scope.launch { snackbar.showSnackbar("需要相机权限才能拍照") }
+    }
+
+    fun requestCamera() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            launchCamera()
+        } else {
+            cameraPermission.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    var showSourceDialog by remember { mutableStateOf(false) }
 
     val selType = RecordType.fromId(type)
 
@@ -199,7 +252,7 @@ fun EditScreen(appState: AppState, id: String?, presetType: String?, back: () ->
                 )
                 2 -> MediaStep(
                     images = images, uploading = uploading,
-                    onAdd = { pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    onAdd = { showSourceDialog = true },
                     onRemove = { i -> images = images.filterIndexed { idx, _ -> idx != i } }
                 )
             }
@@ -251,6 +304,34 @@ fun EditScreen(appState: AppState, id: String?, presetType: String?, back: () ->
             confirmText = "确认删除",
             onConfirm = { appState.deleteRecord(record!!.id); showDelete = false; back() },
             onDismiss = { showDelete = false }
+        )
+    }
+
+    if (showSourceDialog) {
+        AlertDialog(
+            onDismissRequest = { showSourceDialog = false },
+            title = { Text("添加照片", style = MaterialTheme.typography.titleMedium) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("想用哪种方式记录这一刻？", style = MaterialTheme.typography.bodyMedium, color = InkSoft)
+                    Spacer(Modifier.size(4.dp))
+                    TextButton(onClick = { showSourceDialog = false; requestCamera() }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Filled.AddAPhoto, null, tint = Apricot, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("拍照", color = Ink, fontWeight = FontWeight.Bold)
+                    }
+                    TextButton(onClick = { showSourceDialog = false; pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Filled.PhotoLibrary, null, tint = Apricot, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("从相册选择", color = Ink)
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showSourceDialog = false }) { Text("取消", color = InkSoft) }
+            },
+            containerColor = Color(0xFFFFFDF8)
         )
     }
 }

@@ -2,9 +2,13 @@
 
 本项目遵循语义化版本号，每次发版必须同步更新：`app/build.gradle.kts` 中的 `versionCode`/`versionName`、`ui/AppConfig.kt` 中的 `VERSION_CODE`/`VERSION_NAME`/`CHANGELOG`、仓库根目录 `version.json`，并在此追加一条更新说明。
 
+## v1.0.5（2026-08-14）
+
+- 新增：记录时可选择「拍照」或「从相册选照片」，方便拍下孩子洗漱、作品、亲子瞬间等真实画面。
+
 ## v1.0.4（2026-08-14）
 
-- 更新源从 GitHub 切换到 Gitee Pages（国内直连下载，速度更快）。
+- 更新源从 GitHub 切换到腾讯云 COS（国内极速直连下载），并加入阿里云 Maven 镜像加速编译。
 
 ## v1.0.3（2026-08-14）
 
