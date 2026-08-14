@@ -1,6 +1,7 @@
 package com.example.xiaoy.ui.screens
 
 import android.content.Intent
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -62,6 +64,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -77,6 +80,13 @@ fun SettingsScreen(appState: AppState, nav: (com.example.xiaoy.ui.navigation.Rou
 
     var showProfileEdit by remember { mutableStateOf(false) }
     var newTag by remember { mutableStateOf("") }
+
+    // 检查更新状态
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var downloading by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableStateOf(0) }
+    var downloadFailed by remember { mutableStateOf(false) }
 
     LazyColumn(
         Modifier.fillMaxSize().statusBarsPadding(),
@@ -202,14 +212,14 @@ fun SettingsScreen(appState: AppState, nav: (com.example.xiaoy.ui.navigation.Rou
                 SettingRow("更新说明", AppConfig.CHANGELOG) {}
                 SettingRow("检查更新", "从 GitHub 获取最新版本") {
                     scope.launch {
-                        val latest = withContext(Dispatchers.IO) { fetchLatestVersion() }
-                        snackbar.showSnackbar(
-                            when {
-                                latest == null -> "检查失败，请检查网络后重试"
-                                latest != AppConfig.VERSION_NAME -> "发现新版本 v$latest，可在 GitHub 下载"
-                                else -> "已是最新版本 v${AppConfig.VERSION_NAME}"
+                        val info = withContext(Dispatchers.IO) { fetchUpdateInfo() }
+                        when {
+                            info == null -> snackbar.showSnackbar("检查失败，请检查网络后重试")
+                            info.versionName != AppConfig.VERSION_NAME -> {
+                                updateInfo = info; showUpdateDialog = true
                             }
-                        )
+                            else -> snackbar.showSnackbar("已是最新版本 v${AppConfig.VERSION_NAME}")
+                        }
                     }
                 }
             }
@@ -219,15 +229,139 @@ fun SettingsScreen(appState: AppState, nav: (com.example.xiaoy.ui.navigation.Rou
     if (showProfileEdit) {
         ProfileEditDialog(appState, profile, onDismiss = { showProfileEdit = false })
     }
+
+    if (showUpdateDialog && updateInfo != null) {
+        UpdateDialog(
+            info = updateInfo!!,
+            downloading = downloading,
+            progress = downloadProgress,
+            failed = downloadFailed,
+            onDownload = {
+                scope.launch {
+                    downloading = true; downloadFailed = false; downloadProgress = 0
+                    val dest = File(context.filesDir, "update/update.apk").apply { parentFile?.mkdirs() }
+                    val ok = downloadFile(updateInfo!!.downloadUrl, dest) { downloadProgress = it }
+                    downloading = false
+                    if (ok) { showUpdateDialog = false; installApk(context, dest) }
+                    else downloadFailed = true
+                }
+            },
+            onDismiss = { if (!downloading) showUpdateDialog = false }
+        )
+    }
 }
 
-private fun fetchLatestVersion(): String? = try {
+private data class UpdateInfo(
+    val versionName: String,
+    val versionCode: Int,
+    val changelog: String,
+    val downloadUrl: String
+)
+
+private fun fetchUpdateInfo(): UpdateInfo? = try {
     val conn = URL(AppConfig.UPDATE_URL).openConnection() as HttpURLConnection
-    conn.connectTimeout = 5000; conn.readTimeout = 5000
+    conn.connectTimeout = 8000; conn.readTimeout = 8000
     val text = conn.inputStream.bufferedReader().readText()
     conn.disconnect()
-    JSONObject(text).optString("versionName").ifBlank { null }
+    val obj = JSONObject(text)
+    val name = obj.optString("versionName")
+    if (name.isBlank()) null else UpdateInfo(
+        versionName = name,
+        versionCode = obj.optInt("versionCode", 0),
+        changelog = obj.optString("changelog", ""),
+        downloadUrl = obj.optString("downloadUrl", "")
+    )
 } catch (_: Exception) { null }
+
+/** 下载 APK 到本地，返回是否成功（onProgress 0..100） */
+private suspend fun downloadFile(url: String, dest: File, onProgress: (Int) -> Unit): Boolean =
+    withContext(Dispatchers.IO) {
+        try {
+            val conn = URL(url).openConnection() as HttpURLConnection
+            conn.connectTimeout = 15000
+            conn.readTimeout = 60000
+            conn.instanceFollowRedirects = true
+            val length = conn.contentLength.toLong()
+            conn.inputStream.use { input ->
+                dest.outputStream().use { output ->
+                    val buf = ByteArray(16384)
+                    var total = 0L
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        output.write(buf, 0, n)
+                        total += n
+                        if (length > 0) onProgress((total * 100 / length).toInt().coerceIn(0, 100))
+                    }
+                }
+            }
+            conn.disconnect()
+            dest.length() > 0
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+/** 通过 FileProvider 唤起系统安装器安装 APK */
+private fun installApk(context: android.content.Context, apkFile: File) {
+    try {
+        val uri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", apkFile)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    } catch (_: Exception) {
+        // 无 FileProvider 时降级：提示用户自行安装
+        android.widget.Toast.makeText(context, "下载完成，请前往应用更新目录安装", android.widget.Toast.LENGTH_LONG).show()
+    }
+}
+
+@Composable
+private fun UpdateDialog(
+    info: UpdateInfo,
+    downloading: Boolean,
+    progress: Int,
+    failed: Boolean,
+    onDownload: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("发现新版本 v${info.versionName}", style = MaterialTheme.typography.titleMedium) },
+        text = {
+            Column {
+                if (info.changelog.isNotBlank()) {
+                    Text(info.changelog, style = MaterialTheme.typography.bodyMedium, color = InkSoft)
+                }
+                if (downloading) {
+                    Spacer(Modifier.size(12.dp))
+                    LinearProgressIndicator(
+                        progress = { progress / 100f },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Apricot
+                    )
+                    Spacer(Modifier.size(6.dp))
+                    Text("正在下载 $progress%", style = MaterialTheme.typography.labelMedium, color = InkSoft)
+                }
+                if (failed) {
+                    Spacer(Modifier.size(12.dp))
+                    Text("下载失败，请重试", style = MaterialTheme.typography.bodyMedium, color = Color(0xFFB9503A))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDownload, enabled = !downloading) {
+                Text(if (downloading) "下载中…" else "立即更新", color = Apricot, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !downloading) { Text("取消", color = InkSoft) }
+        },
+        containerColor = Paper
+    )
+}
 
 @Composable
 private fun SectionLabel(text: String) {
