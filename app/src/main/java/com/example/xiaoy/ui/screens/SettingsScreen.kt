@@ -87,6 +87,7 @@ fun SettingsScreen(appState: AppState, nav: (com.example.xiaoy.ui.navigation.Rou
     var downloading by remember { mutableStateOf(false) }
     var downloadProgress by remember { mutableStateOf(0) }
     var downloadFailed by remember { mutableStateOf(false) }
+    var downloadError by remember { mutableStateOf("") }
 
     LazyColumn(
         Modifier.fillMaxSize().statusBarsPadding(),
@@ -236,14 +237,15 @@ fun SettingsScreen(appState: AppState, nav: (com.example.xiaoy.ui.navigation.Rou
             downloading = downloading,
             progress = downloadProgress,
             failed = downloadFailed,
+            error = downloadError,
             onDownload = {
                 scope.launch {
-                    downloading = true; downloadFailed = false; downloadProgress = 0
+                    downloading = true; downloadFailed = false; downloadError = ""; downloadProgress = 0
                     val dest = File(context.filesDir, "update/update.apk").apply { parentFile?.mkdirs() }
-                    val ok = downloadFile(updateInfo!!.downloadUrl, dest) { downloadProgress = it }
+                    val err = downloadFile(updateInfo!!.downloadUrl, dest) { downloadProgress = it }
                     downloading = false
-                    if (ok) { showUpdateDialog = false; installApk(context, dest) }
-                    else downloadFailed = true
+                    if (err == null) { showUpdateDialog = false; installApk(context, dest) }
+                    else { downloadFailed = true; downloadError = err }
                 }
             },
             onDismiss = { if (!downloading) showUpdateDialog = false }
@@ -273,15 +275,19 @@ private fun fetchUpdateInfo(): UpdateInfo? = try {
     )
 } catch (_: Exception) { null }
 
-/** 下载 APK 到本地，返回是否成功（onProgress 0..100） */
-private suspend fun downloadFile(url: String, dest: File, onProgress: (Int) -> Unit): Boolean =
+/** 下载 APK 到本地，返回错误信息（null 表示成功，onProgress 0..100） */
+private suspend fun downloadFile(url: String, dest: File, onProgress: (Int) -> Unit): String? =
     withContext(Dispatchers.IO) {
         try {
             val conn = URL(url).openConnection() as HttpURLConnection
-            conn.connectTimeout = 15000
-            conn.readTimeout = 60000
+            conn.connectTimeout = 20000
+            conn.readTimeout = 120000
             conn.instanceFollowRedirects = true
-            val length = conn.contentLength.toLong()
+            conn.setRequestProperty("User-Agent", "XiaoYa-Android/${AppConfig.VERSION_NAME}")
+            conn.setRequestProperty("Accept", "*/*")
+            val code = conn.responseCode
+            if (code !in 200..299) return@withContext "服务器返回错误码 $code"
+            val length = conn.contentLengthLong
             conn.inputStream.use { input ->
                 dest.outputStream().use { output ->
                     val buf = ByteArray(16384)
@@ -296,9 +302,9 @@ private suspend fun downloadFile(url: String, dest: File, onProgress: (Int) -> U
                 }
             }
             conn.disconnect()
-            dest.length() > 0
-        } catch (_: Exception) {
-            false
+            if (dest.length() > 0) null else "下载内容为空"
+        } catch (e: Exception) {
+            e.message ?: e.javaClass.simpleName
         }
     }
 
@@ -324,6 +330,7 @@ private fun UpdateDialog(
     downloading: Boolean,
     progress: Int,
     failed: Boolean,
+    error: String,
     onDownload: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -347,7 +354,7 @@ private fun UpdateDialog(
                 }
                 if (failed) {
                     Spacer(Modifier.size(12.dp))
-                    Text("下载失败，请重试", style = MaterialTheme.typography.bodyMedium, color = Color(0xFFB9503A))
+                    Text("下载失败：${error.ifBlank { "请重试" }}", style = MaterialTheme.typography.bodyMedium, color = Color(0xFFB9503A))
                 }
             }
         },
