@@ -99,13 +99,8 @@ object SampleData {
 
         return AppData(
             version = 1,
-            profile = ChildProfile(
-                parentName = "悦悦妈",
-                childName = "小满",
-                childBirthday = "2020-03-12",
-                city = "杭州",
-                motto = "把孩子的每一次长大，温柔记下来"
-            ),
+            // 首次启动 profile 为空，先进入「填写信息」页；示例记录作为工作台内容预置其中
+            profile = null,
             records = records,
             customTags = listOf("习惯", "亲子", "绘本", "自主阅读", "幼小衔接", "数学", "里程碑", "暖心", "体检", "兴趣课", "食育", "户外", "开学", "收纳"),
             reminderEnabled = true,
