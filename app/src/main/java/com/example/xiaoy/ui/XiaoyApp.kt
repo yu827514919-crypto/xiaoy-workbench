@@ -3,6 +3,7 @@ package com.example.xiaoy.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -67,6 +68,7 @@ import com.example.xiaoy.ui.screens.ReportScreen
 import com.example.xiaoy.ui.screens.SettingsScreen
 import com.example.xiaoy.ui.theme.Apricot
 import com.example.xiaoy.ui.theme.Cream
+import com.example.xiaoy.ui.theme.XiaoYTheme
 import com.example.xiaoy.ui.theme.Ink
 import com.example.xiaoy.ui.theme.InkFaint
 import com.example.xiaoy.ui.theme.InkSoft
@@ -87,7 +89,15 @@ private val tabs = listOf(
 fun XiaoyApp() {
     val context = LocalContext.current
     val appState = remember { AppState(context) }
-    val snackbar = remember { SnackbarHostState() }
+    val data by appState.data.collectAsState()
+    val darkTheme = when (data.themeMode) {
+        "dark" -> true
+        "light" -> false
+        else -> isSystemInDarkTheme()
+    }
+
+    XiaoYTheme(darkTheme = darkTheme) {
+        val snackbar = remember { SnackbarHostState() }
 
     val backStack = remember { mutableStateListOf<Route>() }
     if (backStack.isEmpty()) {
@@ -134,6 +144,7 @@ fun XiaoyApp() {
         celebration?.let { c ->
             CelebrationOverlay(c) { appState.consumeCelebration() }
         }
+    }
     }
 }
 

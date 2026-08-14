@@ -31,6 +31,8 @@ import com.example.xiaoy.ui.theme.Ink
 import com.example.xiaoy.ui.theme.InkFaint
 import com.example.xiaoy.ui.theme.InkSoft
 import com.example.xiaoy.ui.theme.LeafGreen
+import com.example.xiaoy.ui.theme.Line
+import com.example.xiaoy.ui.theme.LocalXiaoYColors
 import com.example.xiaoy.ui.theme.PaperWarm
 import com.example.xiaoy.ui.theme.Sage
 import com.example.xiaoy.ui.theme.Terracotta
@@ -43,7 +45,7 @@ fun ProgressRing(
     size: Dp = 64.dp,
     stroke: Dp = 7.dp,
     color: Color = Apricot,
-    trackColor: Color = Color(0xFFEADFCC),
+    trackColor: Color = Line,
     center: @Composable () -> Unit = {}
 ) {
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
@@ -90,7 +92,7 @@ fun MiniBars(
                             .width(10.dp)
                             .height(barH)
                             .clip(RoundedCornerShape(5.dp))
-                            .background(if (v == 0) Color(0xFFEADFCC) else color)
+                            .background(if (v == 0) Line else color)
                     )
                 }
             }
@@ -155,7 +157,9 @@ fun LegendItem(color: Color, label: String, modifier: Modifier = Modifier) {
 }
 
 // 类型占比配色（与 Visual.tint 对应，保持统一）
-val chartPalette = listOf(
-    Apricot, Sage, Terracotta, LeafGreen,
-    Color(0xFF5B8BB0), Color(0xFF9A6BB0), Color(0xFFC8793A), Color(0xFF6E7C8A)
-)
+val chartPalette: List<Color>
+    @Composable get() = listOf(
+        Apricot, Sage, Terracotta, LeafGreen,
+        LocalXiaoYColors.current.typeBody, LocalXiaoYColors.current.typeInterest,
+        LocalXiaoYColors.current.typeActivity, LocalXiaoYColors.current.typeItem
+    )

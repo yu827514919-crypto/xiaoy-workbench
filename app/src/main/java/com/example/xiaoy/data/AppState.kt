@@ -2,6 +2,8 @@ package com.example.xiaoy.data
 
 import android.content.Context
 import android.net.Uri
+import com.example.xiaoy.notify.ReminderScheduler
+import com.example.xiaoy.widget.WidgetData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,10 +26,18 @@ class AppState(context: Context) {
     private val _celebration = MutableStateFlow<Celebration?>(null)
     val celebration: StateFlow<Celebration?> = _celebration.asStateFlow()
 
+    init {
+        // 启动时根据设置恢复每日提醒闹钟（系统重启后闹钟会丢失），并同步桌面小组件
+        val d = _data.value
+        if (d.reminderEnabled) ReminderScheduler.schedule(appContext, d.reminderTime)
+        WidgetData.sync(appContext, d)
+    }
+
     private fun update(mutate: (AppData) -> AppData) {
         val next = mutate(_data.value)
         _data.value = next
         repo.save(next)
+        WidgetData.sync(appContext, next)
     }
 
     // ============ 基础 CRUD ============
@@ -45,6 +55,14 @@ class AppState(context: Context) {
     fun addImageToRecord(id: String, imagePath: String) = update {
         it.copy(records = it.records.map { r -> if (r.id == id) r.copy(images = r.images + imagePath) else r })
     }
+
+    /** 设置/替换记录的录音 */
+    fun setRecordAudio(id: String, audioPath: String?) = update {
+        it.copy(records = it.records.map { r -> if (r.id == id) r.copy(audioPath = audioPath) else r })
+    }
+
+    /** 录音文件目录 */
+    fun audioDir(): File = File(appContext.filesDir, "audio").apply { mkdirs() }
 
     /** 清除全部记录（保留个人档案与分类），供新用户清空示例数据 */
     fun clearAllRecords() = update {
@@ -74,9 +92,14 @@ class AppState(context: Context) {
         if (tag.isBlank() || tag in it.customTags) it else it.copy(customTags = it.customTags + tag)
     }
 
-    fun setReminder(enabled: Boolean, time: String) = update {
-        it.copy(reminderEnabled = enabled, reminderTime = time)
+    fun setReminder(enabled: Boolean, time: String) {
+        update { it.copy(reminderEnabled = enabled, reminderTime = time) }
+        // 同步调度/取消每日闹钟
+        if (enabled) ReminderScheduler.schedule(appContext, time)
+        else ReminderScheduler.cancel(appContext)
     }
+
+    fun setThemeMode(mode: String) = update { it.copy(themeMode = mode) }
 
     fun consumeCelebration() { _celebration.value = null }
 

@@ -81,6 +81,7 @@ import com.example.xiaoy.ui.theme.Apricot
 import com.example.xiaoy.ui.theme.Cream
 import com.example.xiaoy.ui.theme.Ink
 import com.example.xiaoy.ui.theme.InkSoft
+import com.example.xiaoy.ui.theme.Line
 import com.example.xiaoy.ui.theme.Paper
 import com.example.xiaoy.ui.theme.PaperWarm
 import com.example.xiaoy.ui.theme.Terracotta
@@ -227,7 +228,7 @@ fun EditScreen(appState: AppState, id: String?, presetType: String?, back: () ->
             (0..2).forEach { i ->
                 Box(
                     Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(2.dp))
-                        .background(if (i <= step) Apricot else Color(0xFFE8E0D2))
+                        .background(if (i <= step) Apricot else Line)
                 )
             }
         }
@@ -332,7 +333,7 @@ fun EditScreen(appState: AppState, id: String?, presetType: String?, back: () ->
             dismissButton = {
                 TextButton(onClick = { showSourceDialog = false }) { Text("取消", color = InkSoft) }
             },
-            containerColor = Color(0xFFFFFDF8)
+            containerColor = Paper
         )
     }
 }

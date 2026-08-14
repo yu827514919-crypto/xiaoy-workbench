@@ -56,6 +56,9 @@ import com.example.xiaoy.ui.theme.Apricot
 import com.example.xiaoy.ui.theme.Ink
 import com.example.xiaoy.ui.theme.InkFaint
 import com.example.xiaoy.ui.theme.InkSoft
+import com.example.xiaoy.ui.theme.Line
+import com.example.xiaoy.ui.theme.Paper
+import com.example.xiaoy.ui.theme.PaperWarm
 import com.example.xiaoy.ui.theme.SageSoft
 import com.example.xiaoy.ui.theme.Terracotta
 import com.example.xiaoy.ui.color
@@ -182,12 +185,12 @@ fun TagChip(
     selected: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
-    val bg = if (selected) Apricot else Color(0xFFF4EEE1)
+    val bg = if (selected) Apricot else PaperWarm
     val fg = if (selected) Color.White else InkSoft
     val base = modifier
         .clip(RoundedCornerShape(50))
         .background(bg)
-        .then(if (!selected) Modifier.border(1.dp, Color(0xFFE6DCC8), RoundedCornerShape(50)) else Modifier)
+        .then(if (!selected) Modifier.border(1.dp, Line, RoundedCornerShape(50)) else Modifier)
         .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
         .padding(horizontal = 12.dp, vertical = 6.dp)
     Text(text, style = MaterialTheme.typography.labelMedium, color = fg, modifier = base)
@@ -262,7 +265,7 @@ fun ConfirmDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("取消", color = InkSoft) }
         },
-        containerColor = Color(0xFFFFFDF8)
+        containerColor = Paper
     )
 }
 

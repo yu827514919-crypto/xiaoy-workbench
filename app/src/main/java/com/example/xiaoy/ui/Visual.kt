@@ -9,19 +9,12 @@ import androidx.compose.material.icons.filled.Height
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.School
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.xiaoy.data.RecordStatus
 import com.example.xiaoy.data.RecordType
-import com.example.xiaoy.ui.theme.Apricot
-import com.example.xiaoy.ui.theme.ApricotSoft
-import com.example.xiaoy.ui.theme.InkSoft
-import com.example.xiaoy.ui.theme.LeafGreen
-import com.example.xiaoy.ui.theme.LeafGreenSoft
-import com.example.xiaoy.ui.theme.Sage
-import com.example.xiaoy.ui.theme.SageSoft
-import com.example.xiaoy.ui.theme.Terracotta
-import com.example.xiaoy.ui.theme.TerracottaSoft
+import com.example.xiaoy.ui.theme.LocalXiaoYColors
 
 /** 记录类型 → 场景图标（统一线性/剪影语言，与场景相关） */
 fun RecordType.icon(): ImageVector = when (this) {
@@ -35,29 +28,32 @@ fun RecordType.icon(): ImageVector = when (this) {
     RecordType.ITEM -> Icons.Filled.Checklist
 }
 
+@Composable
 fun RecordType.tint(): Color = when (this) {
-    RecordType.ROUTINE -> Apricot
-    RecordType.READING -> Sage
-    RecordType.STUDY -> Terracotta
-    RecordType.GROWTH -> LeafGreen
-    RecordType.BODY -> Color(0xFF5B8BB0)
-    RecordType.INTEREST -> Color(0xFF9A6BB0)
-    RecordType.ACTIVITY -> Color(0xFFC8793A)
-    RecordType.ITEM -> Color(0xFF6E7C8A)
+    RecordType.ROUTINE -> LocalXiaoYColors.current.primary
+    RecordType.READING -> LocalXiaoYColors.current.secondary
+    RecordType.STUDY -> LocalXiaoYColors.current.accent
+    RecordType.GROWTH -> LocalXiaoYColors.current.leaf
+    RecordType.BODY -> LocalXiaoYColors.current.typeBody
+    RecordType.INTEREST -> LocalXiaoYColors.current.typeInterest
+    RecordType.ACTIVITY -> LocalXiaoYColors.current.typeActivity
+    RecordType.ITEM -> LocalXiaoYColors.current.typeItem
 }
 
+@Composable
 fun RecordStatus.color(): Color = when (this) {
-    RecordStatus.DONE -> LeafGreen
-    RecordStatus.DOING -> Apricot
-    RecordStatus.TODO -> Sage
-    RecordStatus.PLANNED -> InkSoft
-    RecordStatus.ATTENTION -> Terracotta
+    RecordStatus.DONE -> LocalXiaoYColors.current.leaf
+    RecordStatus.DOING -> LocalXiaoYColors.current.primary
+    RecordStatus.TODO -> LocalXiaoYColors.current.secondary
+    RecordStatus.PLANNED -> LocalXiaoYColors.current.inkSoft
+    RecordStatus.ATTENTION -> LocalXiaoYColors.current.accent
 }
 
+@Composable
 fun RecordStatus.container(): Color = when (this) {
-    RecordStatus.DONE -> LeafGreenSoft
-    RecordStatus.DOING -> ApricotSoft
-    RecordStatus.TODO -> SageSoft
-    RecordStatus.PLANNED -> Color(0xFFECE7DC)
-    RecordStatus.ATTENTION -> TerracottaSoft
+    RecordStatus.DONE -> LocalXiaoYColors.current.leafSoft
+    RecordStatus.DOING -> LocalXiaoYColors.current.primarySoft
+    RecordStatus.TODO -> LocalXiaoYColors.current.secondarySoft
+    RecordStatus.PLANNED -> LocalXiaoYColors.current.plannedContainer
+    RecordStatus.ATTENTION -> LocalXiaoYColors.current.accentSoft
 }

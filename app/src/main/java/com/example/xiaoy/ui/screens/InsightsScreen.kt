@@ -53,6 +53,7 @@ import com.example.xiaoy.ui.theme.Apricot
 import com.example.xiaoy.ui.theme.Ink
 import com.example.xiaoy.ui.theme.InkSoft
 import com.example.xiaoy.ui.theme.LeafGreen
+import com.example.xiaoy.ui.theme.Line
 import com.example.xiaoy.ui.theme.Paper
 import com.example.xiaoy.ui.theme.Sage
 import com.example.xiaoy.ui.theme.Terracotta
@@ -131,7 +132,7 @@ fun InsightsScreen(appState: AppState, nav: (Route) -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("浅", style = MaterialTheme.typography.labelSmall, color = InkSoft)
                     Spacer(Modifier.width(4.dp))
-                    Box(Modifier.size(11.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFFEFE8DA)))
+                    Box(Modifier.size(11.dp).clip(RoundedCornerShape(3.dp)).background(Line))
                     Spacer(Modifier.width(3.dp))
                     Box(Modifier.size(11.dp).clip(RoundedCornerShape(3.dp)).background(Sage.copy(alpha = 0.5f)))
                     Spacer(Modifier.width(3.dp))
@@ -304,7 +305,7 @@ private fun MilestoneTimeline(records: List<com.example.xiaoy.data.Record>) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(Modifier.size(12.dp).clip(CircleShape).background(if (i == 0) Apricot else Sage))
                     if (i != records.lastIndex) {
-                        Box(Modifier.width(2.dp).height(48.dp).background(Color(0xFFE8E0D2)))
+                        Box(Modifier.width(2.dp).height(48.dp).background(Line))
                     }
                 }
                 Spacer(Modifier.width(12.dp))
@@ -340,8 +341,9 @@ private fun HabitHeatmap(data: List<Pair<Long, Int>>) {
     }
 }
 
+@Composable
 private fun heatColor(count: Int): Color = when {
-    count == 0 -> Color(0xFFEFE8DA)
+    count == 0 -> Line
     count <= 1 -> Sage.copy(alpha = 0.55f)
     count <= 2 -> Sage
     else -> LeafGreen

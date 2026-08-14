@@ -143,3 +143,11 @@ fun daysToNextBirthday(birthday: String): Int? = try {
 } catch (_: Exception) {
     null
 }
+
+/** 从出生到今天的总天数（成长天数） */
+fun daysSinceBirth(birthday: String): Int? = try {
+    val birth = SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).parse(birthday) ?: return null
+    ((startOfToday() - startOfDay(birth.time)) / 86400000L).toInt().coerceAtLeast(0)
+} catch (_: Exception) {
+    null
+}

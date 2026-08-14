@@ -43,6 +43,7 @@ data class Record(
     val tags: List<String> = emptyList(),
     val notes: String = "",
     val images: List<String> = emptyList(), // "drawable:xxx" 或 "file:/..."
+    val audioPath: String? = null,  // 录音文件绝对路径（一条记录一段声音）
     val num1: Double? = null,       // 关键数值：身高cm / 页数 / 题数 / 数量 / 连续天数
     val num2: Double? = null,       // 次要数值：体重kg / 分钟数 / 已完成数
     val text1: String = "",         // 场景专属文本：起床时间 / 上课时间
@@ -82,5 +83,6 @@ data class AppData(
     val records: List<Record> = emptyList(),
     val customTags: List<String> = emptyList(), // 用户自建分类
     val reminderEnabled: Boolean = true,
-    val reminderTime: String = "20:30"
+    val reminderTime: String = "20:30",
+    val themeMode: String = "system" // "system" | "light" | "dark"
 )

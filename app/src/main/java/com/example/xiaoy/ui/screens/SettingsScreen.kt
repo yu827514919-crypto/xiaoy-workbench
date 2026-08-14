@@ -1,6 +1,12 @@
 package com.example.xiaoy.ui.screens
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -60,6 +66,7 @@ import com.example.xiaoy.ui.theme.Ink
 import com.example.xiaoy.ui.theme.InkSoft
 import com.example.xiaoy.ui.theme.Paper
 import com.example.xiaoy.ui.theme.PaperWarm
+import com.example.xiaoy.ui.theme.Terracotta
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -90,6 +97,14 @@ fun SettingsScreen(appState: AppState, nav: (com.example.xiaoy.ui.navigation.Rou
     var downloadFailed by remember { mutableStateOf(false) }
     var downloadError by remember { mutableStateOf("") }
     var showClearConfirm by remember { mutableStateOf(false) }
+
+    // Android 13+ 通知权限
+    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        appState.setReminder(true, data.reminderTime)
+        if (!granted) {
+            scope.launch { snackbar.showSnackbar("已开启提醒，但通知被系统拦截，请到系统设置里允许「小芽」发通知") }
+        }
+    }
 
     LazyColumn(
         Modifier.fillMaxSize().statusBarsPadding(),
@@ -127,6 +142,20 @@ fun SettingsScreen(appState: AppState, nav: (com.example.xiaoy.ui.navigation.Rou
             }
         }
 
+        // 外观
+        item { SectionLabel("外观") }
+        item {
+            Column(Modifier.padding(horizontal = 16.dp).clip(RoundedCornerShape(20.dp)).background(Paper).padding(16.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("system" to "跟随系统", "light" to "浅色", "dark" to "深色").forEach { (mode, label) ->
+                        TagChip(label, selected = data.themeMode == mode) { appState.setThemeMode(mode) }
+                    }
+                }
+                Spacer(Modifier.size(8.dp))
+                Text("深色模式下，睡前记录更护眼", style = MaterialTheme.typography.labelSmall, color = InkSoft)
+            }
+        }
+
         // 提醒
         item { SectionLabel("每日提醒") }
         item {
@@ -138,7 +167,15 @@ fun SettingsScreen(appState: AppState, nav: (com.example.xiaoy.ui.navigation.Rou
                     }
                     Switch(
                         checked = data.reminderEnabled,
-                        onCheckedChange = { appState.setReminder(it, data.reminderTime) },
+                        onCheckedChange = { on ->
+                            if (on && Build.VERSION.SDK_INT >= 33 &&
+                                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                            ) {
+                                notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                appState.setReminder(on, data.reminderTime)
+                            }
+                        },
                         colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Apricot)
                     )
                 }
@@ -373,7 +410,7 @@ private fun UpdateDialog(
                 }
                 if (failed) {
                     Spacer(Modifier.size(12.dp))
-                    Text("下载失败：${error.ifBlank { "请重试" }}", style = MaterialTheme.typography.bodyMedium, color = Color(0xFFB9503A))
+                    Text("下载失败：${error.ifBlank { "请重试" }}", style = MaterialTheme.typography.bodyMedium, color = Terracotta)
                 }
             }
         },

@@ -38,6 +38,9 @@ import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -68,6 +71,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.xiaoy.data.AppState
+import com.example.xiaoy.data.AudioPlayer
+import com.example.xiaoy.data.AudioRecorder
 import com.example.xiaoy.data.ImageRef
 import com.example.xiaoy.data.Record
 import com.example.xiaoy.data.RecordStatus
@@ -84,17 +89,20 @@ import com.example.xiaoy.ui.components.TagChip
 import com.example.xiaoy.ui.components.drawableRes
 import com.example.xiaoy.ui.navigation.Route
 import com.example.xiaoy.ui.theme.Apricot
+import com.example.xiaoy.ui.theme.ApricotSoft
 import com.example.xiaoy.ui.theme.Cream
 import com.example.xiaoy.ui.theme.Ink
 import com.example.xiaoy.ui.theme.InkSoft
 import com.example.xiaoy.ui.theme.Paper
 import com.example.xiaoy.ui.theme.Sage
 import com.example.xiaoy.ui.theme.Terracotta
+import com.example.xiaoy.ui.theme.TerracottaSoft
 import com.example.xiaoy.ui.tint
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -120,6 +128,59 @@ fun DetailScreen(appState: AppState, id: String, nav: (Route) -> Unit, back: () 
     val scope = rememberCoroutineScope()
     var showAddPhoto by remember { mutableStateOf(false) }
     var addingPhoto by remember { mutableStateOf(false) }
+
+    // —— 录音 ——
+    val recorder = remember { AudioRecorder() }
+    val player = remember { AudioPlayer() }
+    var recording by remember { mutableStateOf(false) }
+    var recordSeconds by remember { mutableStateOf(0) }
+    var playing by remember { mutableStateOf(false) }
+    var showDeleteAudio by remember { mutableStateOf(false) }
+
+    fun startRecording() {
+        val file = File(appState.audioDir(), "rec_${System.currentTimeMillis()}.m4a")
+        val ok = recorder.start(file)
+        if (ok != null) {
+            recording = true
+            recordSeconds = 0
+            scope.launch {
+                while (recorder.isRecording) { delay(1000); recordSeconds++ }
+                recording = false
+            }
+        } else {
+            scope.launch { snackbar.showSnackbar("无法开始录音，请检查麦克风权限") }
+        }
+    }
+
+    fun stopRecording() {
+        val f = recorder.stop()
+        recording = false
+        if (f != null && f.length() > 1000) {
+            appState.setRecordAudio(record.id, f.absolutePath)
+            scope.launch { snackbar.showSnackbar("声音已保存进这条记录") }
+        } else {
+            f?.delete()
+            scope.launch { snackbar.showSnackbar("录音太短，没有保存") }
+        }
+    }
+
+    fun togglePlay() {
+        val path = record.audioPath ?: return
+        playing = player.toggle(path)
+    }
+
+    val audioPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) startRecording()
+        else scope.launch { snackbar.showSnackbar("需要麦克风权限才能录音") }
+    }
+
+    fun requestRecord() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            startRecording()
+        } else {
+            audioPermission.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
 
     fun appendImage(uri: Uri) {
         addingPhoto = true
@@ -167,18 +228,20 @@ fun DetailScreen(appState: AppState, id: String, nav: (Route) -> Unit, back: () 
         }
     }
 
+    val type = record.typeEnum()
+    val typeTintArgb = type.tint().toArgb()
+
     var sharingCard by remember { mutableStateOf(false) }
     fun generateShareCard() {
         scope.launch {
             sharingCard = true
-            val file = withContext(Dispatchers.IO) { buildShareCard(context, record) }
+            val file = withContext(Dispatchers.IO) { buildShareCard(context, record, typeTintArgb) }
             sharingCard = false
             if (file != null) shareImage(context, file)
             else snackbar.showSnackbar("生成卡片失败，请重试")
         }
     }
 
-    val type = record.typeEnum()
     val related = data.records.filter { it.type == record.type && it.id != record.id }.take(3)
     val tagged = data.records.filter { it.id != record.id && it.tags.any { t -> t in record.tags } }.take(3)
 
@@ -347,6 +410,58 @@ fun DetailScreen(appState: AppState, id: String, nav: (Route) -> Unit, back: () 
             }
         }
 
+        // 声音记录
+        item {
+            SectionTitle("声音记录", modifier = Modifier.padding(horizontal = 16.dp).padding(top = 20.dp))
+        }
+        item {
+            Column(Modifier.padding(horizontal = 16.dp).clip(RoundedCornerShape(16.dp)).background(Paper).padding(14.dp)) {
+                val audio = record.audioPath
+                val hasAudio = audio != null && File(audio).exists()
+                when {
+                    recording -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(40.dp).clip(CircleShape).background(TerracottaSoft), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Filled.Mic, null, tint = Terracotta, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("正在录音 ${recordSeconds}s", style = MaterialTheme.typography.titleSmall, color = Ink, fontWeight = FontWeight.SemiBold)
+                                Text("把这一刻的声音温柔留住", style = MaterialTheme.typography.labelSmall, color = InkSoft)
+                            }
+                            Button(onClick = { stopRecording() }, colors = ButtonDefaults.buttonColors(containerColor = Terracotta), shape = RoundedCornerShape(50.dp)) { Text("停止") }
+                        }
+                    }
+                    hasAudio -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(40.dp).clip(CircleShape).background(ApricotSoft).clickable { togglePlay() }, contentAlignment = Alignment.Center) {
+                                Icon(if (playing) Icons.Filled.Stop else Icons.Filled.PlayArrow, null, tint = Apricot, modifier = Modifier.size(22.dp))
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(if (playing) "正在播放…" else "一段孩子的录音", style = MaterialTheme.typography.titleSmall, color = Ink, fontWeight = FontWeight.SemiBold)
+                                Text("点击左侧按钮播放或暂停", style = MaterialTheme.typography.labelSmall, color = InkSoft)
+                            }
+                            IconButton(onClick = { showDeleteAudio = true }) { Icon(Icons.Filled.Delete, null, tint = Terracotta) }
+                        }
+                    }
+                    else -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(40.dp).clip(CircleShape).background(ApricotSoft), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Filled.Mic, null, tint = Apricot, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("录一段声音", style = MaterialTheme.typography.titleSmall, color = Ink, fontWeight = FontWeight.SemiBold)
+                                Text("第一次叫妈妈、唱儿歌、背古诗…", style = MaterialTheme.typography.labelSmall, color = InkSoft)
+                            }
+                            Button(onClick = { requestRecord() }, colors = ButtonDefaults.buttonColors(containerColor = Apricot), shape = RoundedCornerShape(50.dp)) { Text("录音") }
+                        }
+                    }
+                }
+            }
+        }
+
         // 操作按钮
         item {
             Row(Modifier.padding(horizontal = 16.dp).padding(top = 12.dp),
@@ -379,6 +494,23 @@ fun DetailScreen(appState: AppState, id: String, nav: (Route) -> Unit, back: () 
         )
     }
 
+    if (showDeleteAudio) {
+        ConfirmDialog(
+            title = "删除这段录音？",
+            message = "删除后无法恢复，这条记录里将不再有声音。",
+            confirmText = "确认删除",
+            onConfirm = {
+                player.stop()
+                playing = false
+                record.audioPath?.let { File(it).delete() }
+                appState.setRecordAudio(record.id, null)
+                showDeleteAudio = false
+                scope.launch { snackbar.showSnackbar("录音已删除") }
+            },
+            onDismiss = { showDeleteAudio = false }
+        )
+    }
+
     if (showAddPhoto) {
         AlertDialog(
             onDismissRequest = { showAddPhoto = false },
@@ -403,7 +535,7 @@ fun DetailScreen(appState: AppState, id: String, nav: (Route) -> Unit, back: () 
             dismissButton = {
                 TextButton(onClick = { showAddPhoto = false }) { Text("取消", color = InkSoft) }
             },
-            containerColor = Color(0xFFFFFDF8)
+            containerColor = Paper
         )
     }
 }
@@ -459,7 +591,7 @@ private fun loadCoverBitmap(context: android.content.Context, ref: String): Bitm
     }
 } catch (_: Exception) { null }
 
-private fun buildShareCard(context: android.content.Context, record: Record): File? = try {
+private fun buildShareCard(context: android.content.Context, record: Record, tintArgb: Int): File? = try {
     val w = 1080
     val h = 1440
     val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -475,7 +607,7 @@ private fun buildShareCard(context: android.content.Context, record: Record): Fi
         topY = 620
     }
 
-    paint.color = record.typeEnum().tint().toArgb()
+    paint.color = tintArgb
     paint.textSize = 40f
     paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     canvas.drawText(record.typeEnum().label, 60f, (topY + 100).toFloat(), paint)

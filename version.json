@@ -1,6 +1,6 @@
 {
-  "versionName": "1.0.7",
-  "versionCode": 8,
-  "changelog": "v1.0.7 新增：成长倒计时、成长里程碑时间轴、打卡热力图、分享成长卡。",
-  "downloadUrl": "https://xiaoy-workbench-1468493405.cos.ap-guangzhou.myqcloud.com/xiaoy-v1.0.7-debug.zip"
+  "versionName": "1.1.0",
+  "versionCode": 9,
+  "changelog": "v1.1.0 新增：录音记录、桌面小组件、深色模式、每日本地通知提醒。",
+  "downloadUrl": "https://xiaoy-workbench-1468493405.cos.ap-guangzhou.myqcloud.com/xiaoy-v1.1.0-debug.zip"
 }
