@@ -270,6 +270,8 @@ private fun TipRow(text: String) {
 private fun HeightTrendChart(records: List<com.example.xiaoy.data.Record>) {
     val heights = records.mapNotNull { it.num1?.toFloat() }
     val labels = records.map { formatDate(it.dateEpoch) }
+    val lineColor = Apricot
+    val pointColor = LeafGreen
     Column {
         Text("身高曲线", style = MaterialTheme.typography.labelMedium, color = InkSoft)
         Spacer(Modifier.height(6.dp))
@@ -285,8 +287,8 @@ private fun HeightTrendChart(records: List<com.example.xiaoy.data.Record>) {
                     moveTo(pts.first().x, pts.first().y)
                     pts.drop(1).forEach { lineTo(it.x, it.y) }
                 }
-                drawPath(path, color = Apricot, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
-                pts.forEach { p -> drawCircle(LeafGreen, radius = 4.dp.toPx(), center = p) }
+                drawPath(path, color = lineColor, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
+                pts.forEach { p -> drawCircle(pointColor, radius = 4.dp.toPx(), center = p) }
             }
         }
         Row(Modifier.fillMaxWidth()) {

@@ -70,17 +70,18 @@ class AudioPlayer {
     fun toggle(path: String): Boolean = try {
         if (player != null && playingPath == path) {
             stop()
-            return false
+            false
+        } else {
+            stop()
+            player = MediaPlayer().apply {
+                setDataSource(path)
+                setOnCompletionListener { stop() }
+                prepare()
+                start()
+            }
+            playingPath = path
+            true
         }
-        stop()
-        player = MediaPlayer().apply {
-            setDataSource(path)
-            setOnCompletionListener { stop() }
-            prepare()
-            start()
-        }
-        playingPath = path
-        true
     } catch (_: Exception) {
         stop()
         false
